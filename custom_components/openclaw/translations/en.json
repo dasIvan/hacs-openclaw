@@ -16,7 +16,20 @@
       "invalid_auth": "Invalid token"
     },
     "abort": {
-      "already_configured": "OpenClaw is already configured"
+      "already_configured": "OpenClaw AI is already configured"
+    }
+  },
+  "entity": {
+    "sensor": {
+      "status": { "name": "Status" },
+      "model": { "name": "Model" },
+      "tokens_in": { "name": "Tokens In" },
+      "tokens_out": { "name": "Tokens Out" },
+      "last_updated": { "name": "Last Active" },
+      "cost": { "name": "Estimated Cost" }
+    },
+    "button": {
+      "ping": { "name": "Refresh" }
     }
   }
 }

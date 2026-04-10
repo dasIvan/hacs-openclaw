@@ -17,15 +17,17 @@ async def async_setup_entry(
     coordinator: OpenClawCoordinator = hass.data[DOMAIN][entry.entry_id]
     async_add_entities([
         OpenClawStatusSensor(coordinator, entry),
+        OpenClawModelSensor(coordinator, entry),
         OpenClawTokensInSensor(coordinator, entry),
         OpenClawTokensOutSensor(coordinator, entry),
-        OpenClawModelSensor(coordinator, entry),
         OpenClawLastUpdatedSensor(coordinator, entry),
         OpenClawCostSensor(coordinator, entry),
     ])
 
 
 class OpenClawBaseSensor(CoordinatorEntity, SensorEntity):
+    _attr_has_entity_name = True
+
     def __init__(self, coordinator: OpenClawCoordinator, entry: ConfigEntry) -> None:
         super().__init__(coordinator)
         self._entry = entry
@@ -34,14 +36,14 @@ class OpenClawBaseSensor(CoordinatorEntity, SensorEntity):
     def device_info(self):
         return {
             "identifiers": {(DOMAIN, self._entry.entry_id)},
-            "name": "OpenClaw",
+            "name": "OpenClaw AI",
             "manufacturer": "OpenClaw",
             "model": "AI Gateway",
         }
 
 
 class OpenClawStatusSensor(OpenClawBaseSensor):
-    _attr_name = "OpenClaw Status"
+    _attr_translation_key = "status"
     _attr_icon = "mdi:robot"
 
     @property
@@ -58,15 +60,27 @@ class OpenClawStatusSensor(OpenClawBaseSensor):
         return {
             "model": d.get("model"),
             "session": d.get("session"),
-            "queue": d.get("queue"),
             "context_pct": d.get("context_pct"),
             "last_updated": d.get("last_updated"),
         }
 
 
+class OpenClawModelSensor(OpenClawBaseSensor):
+    _attr_translation_key = "model"
+    _attr_icon = "mdi:brain"
+
+    @property
+    def unique_id(self):
+        return f"{self._entry.entry_id}_model"
+
+    @property
+    def native_value(self):
+        return self.coordinator.data.get("model", "unknown")
+
+
 class OpenClawTokensInSensor(OpenClawBaseSensor):
-    _attr_name = "OpenClaw Tokens In"
-    _attr_icon = "mdi:transfer-down"
+    _attr_translation_key = "tokens_in"
+    _attr_icon = "mdi:chip"
     _attr_state_class = SensorStateClass.TOTAL_INCREASING
     _attr_native_unit_of_measurement = "tokens"
 
@@ -80,8 +94,8 @@ class OpenClawTokensInSensor(OpenClawBaseSensor):
 
 
 class OpenClawTokensOutSensor(OpenClawBaseSensor):
-    _attr_name = "OpenClaw Tokens Out"
-    _attr_icon = "mdi:transfer-up"
+    _attr_translation_key = "tokens_out"
+    _attr_icon = "mdi:chip"
     _attr_state_class = SensorStateClass.TOTAL_INCREASING
     _attr_native_unit_of_measurement = "tokens"
 
@@ -94,21 +108,8 @@ class OpenClawTokensOutSensor(OpenClawBaseSensor):
         return self.coordinator.data.get("tokens_out", 0)
 
 
-class OpenClawModelSensor(OpenClawBaseSensor):
-    _attr_name = "OpenClaw Model"
-    _attr_icon = "mdi:brain"
-
-    @property
-    def unique_id(self):
-        return f"{self._entry.entry_id}_model"
-
-    @property
-    def native_value(self):
-        return self.coordinator.data.get("model", "unknown")
-
-
 class OpenClawLastUpdatedSensor(OpenClawBaseSensor):
-    _attr_name = "OpenClaw Last Active"
+    _attr_translation_key = "last_updated"
     _attr_icon = "mdi:clock-outline"
 
     @property
@@ -121,7 +122,7 @@ class OpenClawLastUpdatedSensor(OpenClawBaseSensor):
 
 
 class OpenClawCostSensor(OpenClawBaseSensor):
-    _attr_name = "OpenClaw Estimated Cost"
+    _attr_translation_key = "cost"
     _attr_icon = "mdi:currency-usd"
     _attr_state_class = SensorStateClass.TOTAL_INCREASING
     _attr_native_unit_of_measurement = "USD"

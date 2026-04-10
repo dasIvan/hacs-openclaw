@@ -1,0 +1,35 @@
+{
+  "config": {
+    "step": {
+      "user": {
+        "title": "OpenClaw AI verbinden",
+        "description": "Gib die Verbindungsdaten deines OpenClaw Gateways ein.",
+        "data": {
+          "host": "Host / IP-Adresse",
+          "port": "Port",
+          "token": "Gateway-Token"
+        }
+      }
+    },
+    "error": {
+      "cannot_connect": "Verbindung zum OpenClaw Gateway fehlgeschlagen",
+      "invalid_auth": "Ungültiger Token"
+    },
+    "abort": {
+      "already_configured": "OpenClaw AI ist bereits konfiguriert"
+    }
+  },
+  "entity": {
+    "sensor": {
+      "status": { "name": "Status" },
+      "model": { "name": "Modell" },
+      "tokens_in": { "name": "Tokens Eingang" },
+      "tokens_out": { "name": "Tokens Ausgang" },
+      "last_updated": { "name": "Zuletzt aktiv" },
+      "cost": { "name": "Geschätzte Kosten" }
+    },
+    "button": {
+      "ping": { "name": "Aktualisieren" }
+    }
+  }
+}

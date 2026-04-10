@@ -1,4 +1,4 @@
-"""Button platform for OpenClaw — send a message to Aris."""
+"""Button platform for OpenClaw."""
 from __future__ import annotations
 
 from homeassistant.components.button import ButtonEntity
@@ -18,8 +18,9 @@ async def async_setup_entry(
 
 
 class OpenClawPingButton(ButtonEntity):
-    _attr_name = "OpenClaw Ping"
-    _attr_icon = "mdi:send"
+    _attr_translation_key = "ping"
+    _attr_icon = "mdi:connection"
+    _attr_has_entity_name = True
 
     def __init__(self, coordinator: OpenClawCoordinator, entry: ConfigEntry) -> None:
         self._coordinator = coordinator
@@ -33,10 +34,12 @@ class OpenClawPingButton(ButtonEntity):
     def device_info(self):
         return {
             "identifiers": {(DOMAIN, self._entry.entry_id)},
-            "name": "OpenClaw",
+            "name": "OpenClaw AI",
             "manufacturer": "OpenClaw",
             "model": "AI Gateway",
         }
 
     async def async_press(self) -> None:
-        await self._coordinator.async_send_message("Status-Check von Home Assistant")
+        """Test connectivity to Gateway."""
+        await self._coordinator.async_ping()
+        await self._coordinator.async_request_refresh()

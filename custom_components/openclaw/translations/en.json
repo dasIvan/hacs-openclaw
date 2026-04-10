@@ -2,7 +2,7 @@
   "config": {
     "step": {
       "user": {
-        "title": "Connect to OpenClaw",
+        "title": "Connect to OpenClaw AI",
         "description": "Enter your OpenClaw Gateway details.",
         "data": {
           "host": "Host / IP address",

@@ -33,27 +33,51 @@ class OpenClawCoordinator(DataUpdateCoordinator):
     async def _async_update_data(self) -> dict:
         """Fetch status from OpenClaw."""
         try:
+            headers = {
+                "Authorization": f"Bearer {self.token}",
+                "Content-Type": "application/json",
+            }
             async with aiohttp.ClientSession() as session:
-                payload = {"tool": "session_status", "args": {}}
-                headers = {
-                    "Authorization": f"Bearer {self.token}",
-                    "Content-Type": "application/json",
-                }
+                # Get session list for accurate model, cost, last active
                 async with session.post(
                     f"{self.base_url}/tools/invoke",
-                    json=payload,
+                    json={"tool": "sessions_list", "args": {"messageLimit": 0}},
+                    headers=headers,
+                    timeout=aiohttp.ClientTimeout(total=10),
+                ) as resp:
+                    sessions_data = await resp.json() if resp.status == 200 else {}
+
+                # Get status text for queue/context info
+                async with session.post(
+                    f"{self.base_url}/tools/invoke",
+                    json={"tool": "session_status", "args": {}},
                     headers=headers,
                     timeout=aiohttp.ClientTimeout(total=10),
                 ) as resp:
                     if resp.status != 200:
                         raise UpdateFailed(f"HTTP {resp.status}")
-                    data = await resp.json()
+                    status_data = await resp.json()
 
-            if not data.get("ok"):
+            if not status_data.get("ok"):
                 raise UpdateFailed("OpenClaw returned error")
 
-            raw = data["result"]["content"][0]["text"]
-            return self._parse_status(raw)
+            raw = status_data["result"]["content"][0]["text"]
+            result = self._parse_status(raw)
+
+            # Enrich with session list data
+            sessions = (sessions_data.get("result", {}).get("details", {}).get("sessions") or [])
+            if sessions:
+                import datetime
+                s = sessions[0]
+                result["model"] = s.get("model", result["model"])
+                result["tokens_in"] = s.get("totalTokens", result["tokens_in"])
+                result["estimated_cost_usd"] = round(s.get("estimatedCostUsd", 0), 4)
+                updated_ms = s.get("updatedAt")
+                if updated_ms:
+                    dt = datetime.datetime.fromtimestamp(updated_ms / 1000, tz=datetime.timezone.utc)
+                    result["last_updated"] = dt.strftime("%Y-%m-%d %H:%M UTC")
+
+            return result
 
         except aiohttp.ClientError as err:
             raise UpdateFailed(f"Connection error: {err}") from err

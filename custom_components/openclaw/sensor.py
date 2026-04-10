@@ -21,6 +21,7 @@ async def async_setup_entry(
         OpenClawTokensOutSensor(coordinator, entry),
         OpenClawModelSensor(coordinator, entry),
         OpenClawLastUpdatedSensor(coordinator, entry),
+        OpenClawCostSensor(coordinator, entry),
     ])
 
 
@@ -117,3 +118,18 @@ class OpenClawLastUpdatedSensor(OpenClawBaseSensor):
     @property
     def native_value(self):
         return self.coordinator.data.get("last_updated", "unknown")
+
+
+class OpenClawCostSensor(OpenClawBaseSensor):
+    _attr_name = "OpenClaw Estimated Cost"
+    _attr_icon = "mdi:currency-usd"
+    _attr_state_class = SensorStateClass.TOTAL_INCREASING
+    _attr_native_unit_of_measurement = "USD"
+
+    @property
+    def unique_id(self):
+        return f"{self._entry.entry_id}_cost"
+
+    @property
+    def native_value(self):
+        return self.coordinator.data.get("estimated_cost_usd", 0.0)

@@ -1,0 +1,22 @@
+{
+  "config": {
+    "step": {
+      "user": {
+        "title": "Connect to OpenClaw",
+        "description": "Enter your OpenClaw Gateway details.",
+        "data": {
+          "host": "Host / IP address",
+          "port": "Port",
+          "token": "Gateway Token"
+        }
+      }
+    },
+    "error": {
+      "cannot_connect": "Cannot connect to OpenClaw Gateway",
+      "invalid_auth": "Invalid token"
+    },
+    "abort": {
+      "already_configured": "OpenClaw is already configured"
+    }
+  }
+}

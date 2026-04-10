@@ -78,12 +78,13 @@ class OpenClawCoordinator(DataUpdateCoordinator):
             result["model"] = m.group(1)
 
         # Tokens  e.g. "19k in / 274 out"
-        m = re.search(r"Tokens:\s*([\d\.]+)k?\s*in\s*/\s*([\d\.]+)k?\s*out", text)
+        m = re.search(r"Tokens:\s*([\d\.]+)(k?)\s*in\s*/\s*([\d\.]+)(k?)\s*out", text)
         if m:
-            def to_int(s):
-                return int(float(s) * 1000) if "." in s or len(s) <= 3 else int(s)
-            result["tokens_in"] = to_int(m.group(1))
-            result["tokens_out"] = to_int(m.group(2))
+            def to_int(val, suffix):
+                n = float(val)
+                return int(n * 1000) if suffix == "k" else int(n)
+            result["tokens_in"] = to_int(m.group(1), m.group(2))
+            result["tokens_out"] = to_int(m.group(3), m.group(4))
 
         # Context %
         m = re.search(r"Context:.*?\((\d+)%\)", text)

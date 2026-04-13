@@ -1,24 +1,38 @@
 # OpenClaw Status Card
-# Requires: custom:button-card (installierbar via HACS)
+# Requires: custom:button-card (HACS → Frontend)
 #
-# Entitäten anpassen:
-#   sensor.openclaw_ai_status       → idle / busy
-#   sensor.openclaw_ai_model        → aktives Modell
-#   sensor.openclaw_ai_last_active  → Zeitstempel
-#   binary_sensor.openclaw_ai_connected → Verbindung
-
-# Entitäts-IDs: HA generiert sie aus dem Agenten-Namen den du bei der Installation eingegeben hast.
-# Beispiel: Agent Name "Aris" → sensor.aris_status, binary_sensor.aris_connected etc.
-# Passe die entity-IDs unten entsprechend an.
+# ──────────────────────────────────────────────
+#  SETUP: Trage hier deine Entity-IDs ein
+# ──────────────────────────────────────────────
+# Die IDs findest du unter:
+#   Einstellungen → Geräte & Dienste → OpenClaw → Entitäten
+#
+# Beispiele je nach Sprache:
+#   Deutsch:  sensor.openclaw_status / sensor.openclaw_modell /
+#             sensor.openclaw_zuletzt_aktiv / binary_sensor.openclaw_verbunden
+#   Englisch: sensor.openclaw_status / sensor.openclaw_model /
+#             sensor.openclaw_last_active / binary_sensor.openclaw_connected
+#
+# Das Icon (Lobster) muss einmalig kopiert werden:
+#   /config/www/openclaw/icon.png
+#   → im Browser erreichbar als /local/openclaw/icon.png
 
 type: custom:button-card
-entity: sensor.openclaw_ai_status
-name: "[[[ return states['sensor.openclaw_ai_status']?.attributes?.friendly_name?.split(' ')?.[0] ?? 'OpenClaw'; ]]]"
+entity: sensor.openclaw_status   # ← ANPASSEN
+
+variables:
+  entity_model: sensor.openclaw_modell          # ← ANPASSEN
+  entity_last_active: sensor.openclaw_zuletzt_aktiv  # ← ANPASSEN
+  entity_connected: binary_sensor.openclaw_verbunden # ← ANPASSEN
+  icon_url: /local/openclaw/icon.png
+  agent_name: OpenClaw                          # ← Dein Agent-Name
+
+name: "[[[ return variables.agent_name ]]]"
 label: |
   [[[
-    const model = states['sensor.openclaw_ai_model']?.state ?? '—';
-    const connected = states['binary_sensor.openclaw_ai_connected']?.state === 'on';
-    return connected ? model : 'Offline';
+    const model = states[variables.entity_model]?.state ?? '—';
+    const ok = states[variables.entity_connected]?.state === 'on';
+    return ok ? model : 'Offline';
   ]]]
 icon: none
 show_icon: false
@@ -26,102 +40,87 @@ show_name: true
 show_label: true
 show_state: false
 
-custom_fields:
-  lobster:
-    card:
-      type: image
-      image: /local/openclaw/icon.png
-      style: |
-        ha-card {
-          background: none;
-          box-shadow: none;
-          border: none;
-        }
-      card_mod:
-        style: |
-          :host {
-            --ha-card-border-radius: 0;
-            --ha-card-box-shadow: none;
-          }
-
-  status_badge:
-    card:
-      type: custom:button-card
-      entity: sensor.openclaw_ai_status
-      show_name: false
-      show_icon: false
-      show_state: true
-      style: |
-        ha-card {
-          background: none;
-          box-shadow: none;
-          border: none;
-        }
-      state:
-        - value: busy
-          styles:
-            card:
-              - background: rgba(255, 80, 80, 0.15)
-              - border: 1px solid rgba(255, 80, 80, 0.5)
-              - border-radius: 12px
-              - padding: 2px 10px
-            state:
-              - color: "#ff5050"
-              - font-weight: bold
-        - value: idle
-          styles:
-            card:
-              - background: rgba(80, 200, 120, 0.15)
-              - border: 1px solid rgba(80, 200, 120, 0.5)
-              - border-radius: 12px
-              - padding: 2px 10px
-            state:
-              - color: "#50c878"
-              - font-weight: bold
-
-  last_active:
-    card:
-      type: custom:button-card
-      entity: sensor.openclaw_ai_last_active
-      show_name: false
-      show_icon: false
-      show_state: true
-      style: |
-        ha-card {
-          background: none;
-          box-shadow: none;
-          border: none;
-        }
-      styles:
-        state:
-          - font-size: 11px
-          - color: var(--secondary-text-color)
-
-custom_fields_position: inside
-
 styles:
   card:
     - background: |
         [[[
-          const on = states['binary_sensor.openclaw_ai_connected']?.state === 'on';
-          return on
+          const ok = states[variables.entity_connected]?.state === 'on';
+          return ok
             ? 'linear-gradient(135deg, #1a1a2e 0%, #16213e 60%, #0f3460 100%)'
             : 'linear-gradient(135deg, #1a1a1a 0%, #2a2a2a 100%)';
         ]]]
     - border-radius: 20px
-    - padding: 20px
+    - padding: 20px 20px 16px 20px
     - box-shadow: 0 4px 20px rgba(0,0,0,0.4)
     - border: 1px solid rgba(255,255,255,0.05)
+    - position: relative
+    - overflow: hidden
   name:
     - font-size: 22px
     - font-weight: 700
     - color: white
     - letter-spacing: 1px
+    - margin-top: 90px   # Platz für das Icon oben
+    - display: block
   label:
     - font-size: 13px
     - color: var(--secondary-text-color)
     - margin-top: 2px
 
-grid_options:
-  columns: 6
-  rows: 3
+custom_fields:
+  # Lobster Icon — per CSS background-image, kein type:image nötig
+  lobster: |
+    [[[
+      return `<div style="
+        width: 80px;
+        height: 80px;
+        background-image: url('${variables.icon_url}');
+        background-size: contain;
+        background-repeat: no-repeat;
+        background-position: center;
+        position: absolute;
+        top: 16px;
+        left: 50%;
+        transform: translateX(-50%);
+      "></div>`;
+    ]]]
+
+  # Status Badge (grün = idle, rot = busy)
+  status_badge: |
+    [[[
+      const state = entity?.state ?? 'idle';
+      const busy = state === 'busy';
+      const color = busy ? '#ff5050' : '#50c878';
+      const bg = busy ? 'rgba(255,80,80,0.15)' : 'rgba(80,200,120,0.15)';
+      const border = busy ? 'rgba(255,80,80,0.5)' : 'rgba(80,200,120,0.5)';
+      const label = busy ? '● Beschäftigt' : '● Bereit';
+      return `<div style="
+        display: inline-block;
+        background: ${bg};
+        border: 1px solid ${border};
+        border-radius: 12px;
+        padding: 3px 12px;
+        font-size: 12px;
+        font-weight: 600;
+        color: ${color};
+        margin-top: 8px;
+      ">${label}</div>`;
+    ]]]
+
+  # Letzter Zeitstempel
+  last_active: |
+    [[[
+      const raw = states[variables.entity_last_active]?.state;
+      if (!raw || raw === 'unavailable' || raw === 'unknown') return '';
+      const date = new Date(raw);
+      const now = new Date();
+      const diffMin = Math.round((now - date) / 60000);
+      let label;
+      if (diffMin < 1) label = 'Gerade eben';
+      else if (diffMin < 60) label = `vor ${diffMin} Min.`;
+      else if (diffMin < 1440) label = `vor ${Math.round(diffMin/60)} Std.`;
+      else label = `vor ${Math.round(diffMin/1440)} Tag(en)`;
+      return `<div style="font-size:11px;color:var(--secondary-text-color);margin-top:4px;">${label}</div>`;
+    ]]]
+
+custom_fields_position: inside

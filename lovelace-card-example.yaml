@@ -7,9 +7,13 @@
 #   sensor.openclaw_ai_last_active  → Zeitstempel
 #   binary_sensor.openclaw_ai_connected → Verbindung
 
+# Entitäts-IDs: HA generiert sie aus dem Agenten-Namen den du bei der Installation eingegeben hast.
+# Beispiel: Agent Name "Aris" → sensor.aris_status, binary_sensor.aris_connected etc.
+# Passe die entity-IDs unten entsprechend an.
+
 type: custom:button-card
 entity: sensor.openclaw_ai_status
-name: Aris
+name: "[[[ return states['sensor.openclaw_ai_status']?.attributes?.friendly_name?.split(' ')?.[0] ?? 'OpenClaw'; ]]]"
 label: |
   [[[
     const model = states['sensor.openclaw_ai_model']?.state ?? '—';

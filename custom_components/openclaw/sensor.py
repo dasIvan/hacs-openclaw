@@ -33,7 +33,7 @@ class OpenClawBaseSensor(CoordinatorEntity, SensorEntity):
     def device_info(self):
         return {
             "identifiers": {(DOMAIN, self._entry.entry_id)},
-            "name": "OpenClaw AI",
+            "name": self.coordinator.agent_name,
             "manufacturer": "OpenClaw",
             "model": "AI Gateway",
         }

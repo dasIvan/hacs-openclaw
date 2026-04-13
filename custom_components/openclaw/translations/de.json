@@ -5,6 +5,7 @@
         "title": "OpenClaw AI verbinden",
         "description": "Gib die Verbindungsdaten deines OpenClaw Gateways ein.",
         "data": {
+          "agent_name": "Agenten-Name (z.B. Aris, Jarvis, HAL)",
           "host": "Host / IP-Adresse",
           "port": "Port",
           "token": "Gateway-Token"

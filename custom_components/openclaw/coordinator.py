@@ -9,7 +9,7 @@ from homeassistant.config_entries import ConfigEntry
 from homeassistant.core import HomeAssistant
 from homeassistant.helpers.update_coordinator import DataUpdateCoordinator, UpdateFailed
 
-from .const import CONF_HOST, CONF_PORT, CONF_TOKEN, DEFAULT_SCAN_INTERVAL, DOMAIN
+from .const import CONF_AGENT_NAME, CONF_HOST, CONF_PORT, CONF_TOKEN, DEFAULT_AGENT_NAME, DEFAULT_SCAN_INTERVAL, DOMAIN
 
 _LOGGER = logging.getLogger(__name__)
 
@@ -27,6 +27,7 @@ class OpenClawCoordinator(DataUpdateCoordinator):
         self.host = entry.data[CONF_HOST]
         self.port = entry.data[CONF_PORT]
         self.token = entry.data[CONF_TOKEN]
+        self.agent_name = entry.data.get(CONF_AGENT_NAME, DEFAULT_AGENT_NAME)
         self.base_url = f"http://{self.host}:{self.port}"
 
     @property

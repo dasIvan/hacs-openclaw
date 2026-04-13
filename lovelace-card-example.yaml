@@ -24,11 +24,8 @@ variables:
   entity_model: sensor.openclaw_modell          # ← ANPASSEN
   entity_last_active: sensor.openclaw_zuletzt_aktiv  # ← ANPASSEN
   entity_connected: binary_sensor.openclaw_verbunden # ← ANPASSEN
-  # Icon wird automatisch mit der Integration installiert (brands/openclaw.svg)
-  # Option A: direkt von GitHub laden (kein manuelles Kopieren nötig)
-  icon_url: https://raw.githubusercontent.com/dasIvan/hacs-openclaw/master/brands/openclaw.svg
-  # Option B: lokal (schneller, offline-fähig) → /config/www/openclaw/openclaw.svg
-  # icon_url: /local/openclaw/openclaw.svg
+  # Icon wird beim Start der Integration automatisch nach /config/www/openclaw/ kopiert
+  icon_url: /local/openclaw/openclaw.svg
   agent_name: OpenClaw                          # ← Dein Agent-Name
 
 name: "[[[ return variables.agent_name ]]]"

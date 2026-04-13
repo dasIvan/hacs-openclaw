@@ -1,0 +1,123 @@
+# OpenClaw Status Card
+# Requires: custom:button-card (installierbar via HACS)
+#
+# Entitäten anpassen:
+#   sensor.openclaw_ai_status       → idle / busy
+#   sensor.openclaw_ai_model        → aktives Modell
+#   sensor.openclaw_ai_last_active  → Zeitstempel
+#   binary_sensor.openclaw_ai_connected → Verbindung
+
+type: custom:button-card
+entity: sensor.openclaw_ai_status
+name: Aris
+label: |
+  [[[
+    const model = states['sensor.openclaw_ai_model']?.state ?? '—';
+    const connected = states['binary_sensor.openclaw_ai_connected']?.state === 'on';
+    return connected ? model : 'Offline';
+  ]]]
+icon: none
+show_icon: false
+show_name: true
+show_label: true
+show_state: false
+
+custom_fields:
+  lobster:
+    card:
+      type: image
+      image: /local/openclaw/icon.png
+      style: |
+        ha-card {
+          background: none;
+          box-shadow: none;
+          border: none;
+        }
+      card_mod:
+        style: |
+          :host {
+            --ha-card-border-radius: 0;
+            --ha-card-box-shadow: none;
+          }
+
+  status_badge:
+    card:
+      type: custom:button-card
+      entity: sensor.openclaw_ai_status
+      show_name: false
+      show_icon: false
+      show_state: true
+      style: |
+        ha-card {
+          background: none;
+          box-shadow: none;
+          border: none;
+        }
+      state:
+        - value: busy
+          styles:
+            card:
+              - background: rgba(255, 80, 80, 0.15)
+              - border: 1px solid rgba(255, 80, 80, 0.5)
+              - border-radius: 12px
+              - padding: 2px 10px
+            state:
+              - color: "#ff5050"
+              - font-weight: bold
+        - value: idle
+          styles:
+            card:
+              - background: rgba(80, 200, 120, 0.15)
+              - border: 1px solid rgba(80, 200, 120, 0.5)
+              - border-radius: 12px
+              - padding: 2px 10px
+            state:
+              - color: "#50c878"
+              - font-weight: bold
+
+  last_active:
+    card:
+      type: custom:button-card
+      entity: sensor.openclaw_ai_last_active
+      show_name: false
+      show_icon: false
+      show_state: true
+      style: |
+        ha-card {
+          background: none;
+          box-shadow: none;
+          border: none;
+        }
+      styles:
+        state:
+          - font-size: 11px
+          - color: var(--secondary-text-color)
+
+custom_fields_position: inside
+
+styles:
+  card:
+    - background: |
+        [[[
+          const on = states['binary_sensor.openclaw_ai_connected']?.state === 'on';
+          return on
+            ? 'linear-gradient(135deg, #1a1a2e 0%, #16213e 60%, #0f3460 100%)'
+            : 'linear-gradient(135deg, #1a1a1a 0%, #2a2a2a 100%)';
+        ]]]
+    - border-radius: 20px
+    - padding: 20px
+    - box-shadow: 0 4px 20px rgba(0,0,0,0.4)
+    - border: 1px solid rgba(255,255,255,0.05)
+  name:
+    - font-size: 22px
+    - font-weight: 700
+    - color: white
+    - letter-spacing: 1px
+  label:
+    - font-size: 13px
+    - color: var(--secondary-text-color)
+    - margin-top: 2px
+
+grid_options:
+  columns: 6
+  rows: 3

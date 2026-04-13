@@ -23,13 +23,10 @@
     "sensor": {
       "status": { "name": "Status" },
       "model": { "name": "Model" },
-      "tokens_in": { "name": "Tokens In" },
-      "tokens_out": { "name": "Tokens Out" },
-      "last_updated": { "name": "Last Active" },
-      "cost": { "name": "Estimated Cost" }
+      "last_active": { "name": "Last Active" }
     },
-    "button": {
-      "ping": { "name": "Refresh" }
+    "binary_sensor": {
+      "connected": { "name": "Connected" }
     }
   }
 }

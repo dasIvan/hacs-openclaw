@@ -1,10 +1,8 @@
 """DataUpdateCoordinator for OpenClaw."""
 from __future__ import annotations
 
-import datetime
 import logging
-import re
-from datetime import timedelta
+from datetime import datetime, timezone, timedelta
 
 import aiohttp
 from homeassistant.config_entries import ConfigEntry
@@ -17,7 +15,7 @@ _LOGGER = logging.getLogger(__name__)
 
 
 class OpenClawCoordinator(DataUpdateCoordinator):
-    """Fetch data from OpenClaw Gateway."""
+    """Fetch data from OpenClaw Gateway via sessions_list."""
 
     def __init__(self, hass: HomeAssistant, entry: ConfigEntry) -> None:
         super().__init__(
@@ -38,95 +36,53 @@ class OpenClawCoordinator(DataUpdateCoordinator):
             "Content-Type": "application/json",
         }
 
-    async def _invoke(self, session: aiohttp.ClientSession, tool: str, args: dict = {}) -> dict:
-        """Call /tools/invoke and return parsed result."""
-        async with session.post(
-            f"{self.base_url}/tools/invoke",
-            json={"tool": tool, "args": args},
-            headers=self._headers,
-            timeout=aiohttp.ClientTimeout(total=10),
-        ) as resp:
-            if resp.status != 200:
-                raise UpdateFailed(f"HTTP {resp.status} on tool {tool}")
-            return await resp.json()
-
     async def _async_update_data(self) -> dict:
-        """Fetch status from OpenClaw."""
+        """Fetch status from OpenClaw using sessions_list only."""
+        result = {
+            "connected": False,
+            "state": "idle",
+            "model": None,
+            "last_active": None,
+        }
+
         try:
             async with aiohttp.ClientSession() as session:
-                sessions_resp = await self._invoke(session, "sessions_list", {})
-                status_resp = await self._invoke(session, "session_status", {})
+                async with session.post(
+                    f"{self.base_url}/tools/invoke",
+                    json={"tool": "sessions_list", "args": {}},
+                    headers=self._headers,
+                    timeout=aiohttp.ClientTimeout(total=10),
+                ) as resp:
+                    if resp.status == 200:
+                        data = await resp.json()
+                        result["connected"] = True
+                        self._parse_sessions(data, result)
+                    else:
+                        raise UpdateFailed(f"HTTP {resp.status}")
         except aiohttp.ClientError as err:
             raise UpdateFailed(f"Connection error: {err}") from err
 
-        # Parse status text for context/queue info
-        raw = status_resp.get("result", {}).get("content", [{}])[0].get("text", "")
-        result = self._parse_status_text(raw)
+        return result
 
-        # Enrich from sessions_list (more reliable)
+    def _parse_sessions(self, data: dict, result: dict) -> None:
+        """Extract state, model, last_active from sessions_list response."""
         sessions = (
-            sessions_resp.get("result", {}).get("details", {}).get("sessions") or []
+            data.get("result", {}).get("details", {}).get("sessions") or []
         )
-        if sessions:
-            # Pick the most recently updated session
-            s = sorted(sessions, key=lambda x: x.get("updatedAt", 0), reverse=True)[0]
+        if not sessions:
+            return
 
-            result["model"] = s.get("model") or result["model"]
-            result["tokens_in"] = s.get("totalTokens", result["tokens_in"])
-            result["estimated_cost_usd"] = round(s.get("estimatedCostUsd", 0), 4)
+        # Most recently updated session
+        s = sorted(sessions, key=lambda x: x.get("updatedAt", 0), reverse=True)[0]
 
-            # Status from session: "running" → busy, anything else → idle
-            session_status = s.get("status", "done")
-            result["state"] = "busy" if session_status == "running" else "idle"
+        result["model"] = s.get("model") or None
+        result["state"] = "busy" if s.get("status") == "running" else "idle"
 
-            updated_ms = s.get("updatedAt")
-            if updated_ms:
-                dt = datetime.datetime.fromtimestamp(
-                    updated_ms / 1000, tz=datetime.timezone.utc
-                )
-                result["last_updated"] = dt.strftime("%Y-%m-%d %H:%M UTC")
-
-        return result
-
-    def _parse_status_text(self, text: str) -> dict:
-        """Parse session_status text for supplementary info."""
-        result = {
-            "raw": text,
-            "state": "idle",
-            "model": None,
-            "tokens_in": 0,
-            "tokens_out": 0,
-            "context_pct": 0,
-            "last_updated": None,
-            "session": None,
-            "estimated_cost_usd": 0.0,
-        }
-
-        # Model
-        m = re.search(r"Model:\s*([\w/\.\-]+)", text)
-        if m:
-            result["model"] = m.group(1)
-
-        # Tokens e.g. "19k in / 274 out"
-        m = re.search(r"Tokens:\s*([\d\.]+)(k?)\s*in\s*/\s*([\d\.]+)(k?)\s*out", text)
-        if m:
-            def to_int(val, suffix):
-                n = float(val)
-                return int(n * 1000) if suffix == "k" else int(n)
-            result["tokens_in"] = to_int(m.group(1), m.group(2))
-            result["tokens_out"] = to_int(m.group(3), m.group(4))
-
-        # Context %
-        m = re.search(r"Context:.*?\((\d+)%\)", text)
-        if m:
-            result["context_pct"] = int(m.group(1))
-
-        # Session key
-        m = re.search(r"Session:\s*([\w:]+)", text)
-        if m:
-            result["session"] = m.group(1)
-
-        return result
+        updated_ms = s.get("updatedAt")
+        if updated_ms:
+            result["last_active"] = datetime.fromtimestamp(
+                updated_ms / 1000, tz=timezone.utc
+            )
 
     async def async_ping(self) -> bool:
         """Test connectivity to OpenClaw Gateway."""
@@ -134,30 +90,9 @@ class OpenClawCoordinator(DataUpdateCoordinator):
             async with aiohttp.ClientSession() as session:
                 async with session.post(
                     f"{self.base_url}/tools/invoke",
-                    json={"tool": "session_status", "args": {}},
+                    json={"tool": "sessions_list", "args": {}},
                     headers=self._headers,
                     timeout=aiohttp.ClientTimeout(total=5),
-                ) as resp:
-                    return resp.status == 200
-        except aiohttp.ClientError:
-            return False
-
-    async def async_send_message(self, message: str) -> bool:
-        """Send a message to OpenClaw main session."""
-        try:
-            async with aiohttp.ClientSession() as session:
-                async with session.post(
-                    f"{self.base_url}/tools/invoke",
-                    json={
-                        "tool": "sessions_send",
-                        "args": {
-                            "sessionKey": "main",
-                            "message": message,
-                            "timeoutSeconds": 60,
-                        },
-                    },
-                    headers=self._headers,
-                    timeout=aiohttp.ClientTimeout(total=65),
                 ) as resp:
                     return resp.status == 200
         except aiohttp.ClientError:

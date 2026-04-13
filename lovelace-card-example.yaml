@@ -6,122 +6,135 @@
 # ──────────────────────────────────────────────
 # Die IDs findest du unter:
 #   Einstellungen → Geräte & Dienste → OpenClaw → Entitäten
-#
-# Beispiele je nach Sprache:
-#   Deutsch:  sensor.openclaw_status / sensor.openclaw_modell /
-#             sensor.openclaw_zuletzt_aktiv / binary_sensor.openclaw_verbunden
-#   Englisch: sensor.openclaw_status / sensor.openclaw_model /
-#             sensor.openclaw_last_active / binary_sensor.openclaw_connected
-#
-# Das Icon (Lobster) muss einmalig kopiert werden:
-#   /config/www/openclaw/icon.png
-#   → im Browser erreichbar als /local/openclaw/icon.png
 
 type: custom:button-card
 entity: sensor.openclaw_status   # ← ANPASSEN
 
 variables:
-  entity_model: sensor.openclaw_modell          # ← ANPASSEN
-  entity_last_active: sensor.openclaw_zuletzt_aktiv  # ← ANPASSEN
+  entity_model: sensor.openclaw_modell              # ← ANPASSEN
+  entity_last_active: sensor.openclaw_zuletzt_aktiv # ← ANPASSEN
   entity_connected: binary_sensor.openclaw_verbunden # ← ANPASSEN
-  # Icon wird beim Start der Integration automatisch nach /config/www/openclaw/ kopiert
-  icon_url: /local/openclaw/openclaw.svg
-  agent_name: OpenClaw                          # ← Dein Agent-Name
+  agent_name: OpenClaw                              # ← Dein Agent-Name
+  agent_emoji: "🦞"                                 # ← Emoji für den Bot
 
-name: "[[[ return variables.agent_name ]]]"
-label: |
-  [[[
-    const model = states[variables.entity_model]?.state ?? '—';
-    const ok = states[variables.entity_connected]?.state === 'on';
-    return ok ? model : 'Offline';
-  ]]]
-icon: none
-show_icon: false
-show_name: true
-show_label: true
+show_name: false
+show_label: false
 show_state: false
+show_icon: false
+
+custom_fields:
+  card_content: |
+    [[[
+      const status = entity?.state ?? 'idle';
+      const busy = status === 'busy';
+      const connected = states[variables.entity_connected]?.state === 'on';
+      const model = states[variables.entity_model]?.state ?? '—';
+
+      // Relative Zeit
+      const raw = states[variables.entity_last_active]?.state;
+      let timeLabel = '—';
+      if (raw && raw !== 'unavailable' && raw !== 'unknown') {
+        const diffMin = Math.round((Date.now() - new Date(raw)) / 60000);
+        if (diffMin < 1) timeLabel = 'Gerade eben';
+        else if (diffMin < 60) timeLabel = `vor ${diffMin} Min.`;
+        else if (diffMin < 1440) timeLabel = `vor ${Math.round(diffMin / 60)} Std.`;
+        else timeLabel = `vor ${Math.round(diffMin / 1440)} Tag(en)`;
+      }
+
+      // Status Badge
+      const badgeColor = busy ? '#ff5050' : '#50c878';
+      const badgeBg = busy ? 'rgba(255,80,80,0.12)' : 'rgba(80,200,120,0.12)';
+      const badgeBorder = busy ? 'rgba(255,80,80,0.4)' : 'rgba(80,200,120,0.4)';
+      const badgeLabel = busy ? 'Beschäftigt' : 'Bereit';
+      const dotColor = busy ? '#ff5050' : '#50c878';
+
+      // Modell — nur den letzten Teil nach / anzeigen
+      const modelShort = model.includes('/') ? model.split('/').pop() : model;
+
+      return `
+        <div style="
+          display: flex;
+          align-items: center;
+          gap: 16px;
+          padding: 4px 0;
+        ">
+          <!-- Emoji / Icon -->
+          <div style="
+            font-size: 48px;
+            line-height: 1;
+            flex-shrink: 0;
+            filter: drop-shadow(0 2px 6px rgba(0,0,0,0.4));
+          ">${variables.agent_emoji}</div>
+
+          <!-- Rechte Seite -->
+          <div style="flex: 1; min-width: 0;">
+            <!-- Name + Badge -->
+            <div style="display: flex; align-items: center; gap: 8px; flex-wrap: wrap;">
+              <span style="
+                font-size: 20px;
+                font-weight: 700;
+                color: white;
+                letter-spacing: 0.5px;
+              ">${variables.agent_name}</span>
+              <span style="
+                display: inline-flex;
+                align-items: center;
+                gap: 5px;
+                background: ${badgeBg};
+                border: 1px solid ${badgeBorder};
+                border-radius: 20px;
+                padding: 2px 10px;
+                font-size: 11px;
+                font-weight: 600;
+                color: ${badgeColor};
+              ">
+                <span style="
+                  width: 6px; height: 6px;
+                  border-radius: 50%;
+                  background: ${dotColor};
+                  display: inline-block;
+                "></span>
+                ${badgeLabel}
+              </span>
+            </div>
+
+            <!-- Status + Last Active -->
+            <div style="margin-top: 6px; font-size: 12px; color: rgba(255,255,255,0.55);">
+              <span>Status: <strong style="color:rgba(255,255,255,0.85)">${badgeLabel}</strong></span>
+              &nbsp;·&nbsp;
+              <span>Zuletzt Aktiv: <strong style="color:rgba(255,255,255,0.85)">${timeLabel}</strong></span>
+            </div>
+          </div>
+        </div>
+
+        <!-- Divider -->
+        <div style="
+          height: 1px;
+          background: rgba(255,255,255,0.06);
+          margin: 14px 0 10px;
+        "></div>
+
+        <!-- Footer -->
+        <div style="
+          display: flex;
+          justify-content: space-between;
+          align-items: center;
+          font-size: 11px;
+          color: rgba(255,255,255,0.35);
+        ">
+          <span>Agent · ${connected ? modelShort : 'Offline'}</span>
+          <span>OpenClaw v1.0</span>
+        </div>
+      `;
+    ]]]
 
 styles:
   card:
-    - background: |
-        [[[
-          const ok = states[variables.entity_connected]?.state === 'on';
-          return ok
-            ? 'linear-gradient(135deg, #1a1a2e 0%, #16213e 60%, #0f3460 100%)'
-            : 'linear-gradient(135deg, #1a1a1a 0%, #2a2a2a 100%)';
-        ]]]
+    - background: "linear-gradient(135deg, #1a1a2e 0%, #16213e 60%, #0f3460 100%)"
     - border-radius: 20px
-    - padding: 20px 20px 16px 20px
-    - box-shadow: 0 4px 20px rgba(0,0,0,0.4)
+    - padding: 18px 20px 14px
+    - box-shadow: 0 4px 24px rgba(0,0,0,0.45)
     - border: 1px solid rgba(255,255,255,0.05)
-    - position: relative
-    - overflow: hidden
-  name:
-    - font-size: 22px
-    - font-weight: 700
-    - color: white
-    - letter-spacing: 1px
-    - margin-top: 90px   # Platz für das Icon oben
-    - display: block
-  label:
-    - font-size: 13px
-    - color: var(--secondary-text-color)
-    - margin-top: 2px
-
-custom_fields:
-  # Lobster Icon — per CSS background-image, kein type:image nötig
-  lobster: |
-    [[[
-      return `<div style="
-        width: 80px;
-        height: 80px;
-        background-image: url('${variables.icon_url}');
-        background-size: contain;
-        background-repeat: no-repeat;
-        background-position: center;
-        position: absolute;
-        top: 16px;
-        left: 50%;
-        transform: translateX(-50%);
-      "></div>`;
-    ]]]
-
-  # Status Badge (grün = idle, rot = busy)
-  status_badge: |
-    [[[
-      const state = entity?.state ?? 'idle';
-      const busy = state === 'busy';
-      const color = busy ? '#ff5050' : '#50c878';
-      const bg = busy ? 'rgba(255,80,80,0.15)' : 'rgba(80,200,120,0.15)';
-      const border = busy ? 'rgba(255,80,80,0.5)' : 'rgba(80,200,120,0.5)';
-      const label = busy ? '● Beschäftigt' : '● Bereit';
-      return `<div style="
-        display: inline-block;
-        background: ${bg};
-        border: 1px solid ${border};
-        border-radius: 12px;
-        padding: 3px 12px;
-        font-size: 12px;
-        font-weight: 600;
-        color: ${color};
-        margin-top: 8px;
-      ">${label}</div>`;
-    ]]]
-
-  # Letzter Zeitstempel
-  last_active: |
-    [[[
-      const raw = states[variables.entity_last_active]?.state;
-      if (!raw || raw === 'unavailable' || raw === 'unknown') return '';
-      const date = new Date(raw);
-      const now = new Date();
-      const diffMin = Math.round((now - date) / 60000);
-      let label;
-      if (diffMin < 1) label = 'Gerade eben';
-      else if (diffMin < 60) label = `vor ${diffMin} Min.`;
-      else if (diffMin < 1440) label = `vor ${Math.round(diffMin/60)} Std.`;
-      else label = `vor ${Math.round(diffMin/1440)} Tag(en)`;
-      return `<div style="font-size:11px;color:var(--secondary-text-color);margin-top:4px;">${label}</div>`;
-    ]]]
-
-custom_fields_position: inside
+  custom_fields:
+    card_content:
+      - width: 100%
